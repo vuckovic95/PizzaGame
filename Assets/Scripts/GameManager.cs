@@ -32,6 +32,7 @@ public class GameManager : MonoBehaviour
     [BoxGroup("Level Info")] public List<IngredientType> recipe;
     [BoxGroup("Level Info")] public int currentIngr = 0;
     [BoxGroup("Level Info")] public int ingrFired = 0;
+    [BoxGroup("Level Info")] public int overlaps = 0;
 
     private Coroutines coroutines;
 
@@ -58,9 +59,10 @@ public class GameManager : MonoBehaviour
 
             if (Physics.Raycast(ray, out hit, 100))
             {
-                if(hit.transform.gameObject.tag == "Player")
+                IngredientsController ic = hit.transform.GetComponent<IngredientsController>();
+                if(ic != null)
                 {
-                    hit.transform.GetComponent<IngredientsController>().Throw();
+                    ic.Throw();
                 }
             }
         }
@@ -95,21 +97,49 @@ public class GameManager : MonoBehaviour
             {
                 ingrFired = 0;
                 currentIngr++;
+                endPoint.position = endPoint.position - new Vector3(0f, 0f, 0.1f);
                 if (currentIngr < recipe.Count)
                 {
+                    PizzaCheck();
                     SpawnIngridient();
                 }
                 else
                 {
+                    PizzaCheck();
                     StartCoroutine(coroutines.LerpFieldOfView(Camera.main, Camera.main.fieldOfView, 100, 0.7f));
                     StartCoroutine(LerpPositionX(box, box.position, pizzaPlate.position, 1f, ()=>
                     {
                         box.transform.GetComponent<BoxController>().MakeBox();
+                        GlobalManager.CameraController.WinRotate();
                     }));
                     //Win();
                 }
             }));
         }
+    }
+
+    public void PizzaCheck()
+    {
+        overlaps = overlaps / 2;
+        if(overlaps == 0)
+        {
+            print("PERFECT");
+        }
+        else if(overlaps == 1)
+        {
+            print("GOOD");
+        }
+        else if(overlaps == 2)
+        {
+            print("OKAY");
+        }
+        else
+        {
+            Lose();
+            print("FAIL");
+        }
+
+        overlaps = 0;
     }
 
     public void Win()

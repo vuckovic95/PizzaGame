@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Global;
 
 public class BoxController : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class BoxController : MonoBehaviour
     public Quaternion rot1, rot2, rot3, rot4, rot5;
     public bool make = false;
     public AnimationCurve curve;
+    public float edgeTime;
 
     private void Start()
     {
@@ -37,30 +39,30 @@ public class BoxController : MonoBehaviour
 
     public void MakeEdges()
     {
-        StartCoroutine(LerpRotation(topPivot1, topPivot1.rotation, rot1, .8f));
-        StartCoroutine(LerpRotation(rightPivot1, rightPivot1.rotation, rot2, .8f));
-        StartCoroutine(LerpRotation(botPivot1, botPivot1.rotation, rot3, .8f));
-        StartCoroutine(LerpRotation(topPivot2, topPivot2.rotation, rot1, .8f));
-        StartCoroutine(LerpRotation(leftPivot2, leftPivot2.rotation, rot4, .8f));
-        StartCoroutine(LerpRotation(botPivot2, botPivot2.rotation, rot3, .8f));
+        StartCoroutine(LerpRotation(topPivot1, topPivot1.rotation, rot1, edgeTime));
+        StartCoroutine(LerpRotation(rightPivot1, rightPivot1.rotation, rot2, edgeTime));
+        StartCoroutine(LerpRotation(botPivot1, botPivot1.rotation, rot3, edgeTime));
+        StartCoroutine(LerpRotation(topPivot2, topPivot2.rotation, rot1, edgeTime));
+        StartCoroutine(LerpRotation(leftPivot2, leftPivot2.rotation, rot4, edgeTime));
+        StartCoroutine(LerpRotation(botPivot2, botPivot2.rotation, rot3, edgeTime));
     }
 
     public void MakeBox()
     {
         MakeEdges();
-        StartCoroutine(WaitForSeconds(1f, () =>
+        StartCoroutine(WaitForSeconds(edgeTime + 0.1f, () =>
         {
-            StartCoroutine(LerpRotation(leftPivot1, leftPivot1.rotation, rot4, .8f, ()=>
+            StartCoroutine(LerpRotation(leftPivot1, leftPivot1.rotation, rot4, edgeTime, ()=>
             {
-                StartCoroutine(LerpRotation(rightPivot2, rightPivot2.rotation, rot5, 1f));
+                StartCoroutine(LerpRotation(rightPivot2, rightPivot2.rotation, rot5, edgeTime));
             }));
         }));
-        //StartCoroutine(WaitForSeconds(1.9f, () =>
-        //{
-        //}));
-        StartCoroutine(WaitForSeconds(2.9f, () =>
+        StartCoroutine(WaitForSeconds(3*edgeTime + 0.2f, () =>
         {
-            StartCoroutine(LerpRotationZ(transform, transform.rotation, transform.rotation, 2f));
+            StartCoroutine(LerpRotationZ(transform, transform.rotation, transform.rotation, 2f, ()=>
+            {
+                GlobalManager.GameManager.Win();
+            }));
         }));
     }
 

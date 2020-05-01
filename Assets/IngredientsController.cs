@@ -4,16 +4,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using Global;
 
+#pragma warning disable 0108
+
 public class IngredientsController : MonoBehaviour
 {
+    public GameManager.Ingredients type;
     public AnimationCurve curve;
     public float time;
     public Vector3 endScale;
-
+    public Vector3 collider_scale;
+     
     private Transform pizzaPlate;
     private Transform endPoint;
     private Coroutines coroutines;
     private Transform tr;
+    private BoxCollider collider;
+    private Vector3 startSize;
+    private bool throwed = false;
 
     void Awake()
     {
@@ -27,22 +34,38 @@ public class IngredientsController : MonoBehaviour
         tr = transform;
         pizzaPlate = GlobalManager.GameManager.pizzaPlate;
         endPoint = GlobalManager.GameManager.endPoint;
+
         if (endScale == Vector3.zero)
             endScale = tr.localScale;
+
+        collider = GetComponent<BoxCollider>();
+        startSize = collider.size;
+
+        if (collider_scale == Vector3.zero)
+            collider_scale = collider.size;
     }
 
     public void Throw()
     {
+        collider.size = collider_scale;
         StartCoroutine(LerpRotation(tr, tr.rotation, endPoint.rotation, time));
         StartCoroutine(LerpPositionZ(tr, tr.position, endPoint.position, time));
         StartCoroutine(LerpScale(tr, tr.localScale, endScale, time));
         StartCoroutine(LerpPositionY(tr, tr.position, endPoint.position, time, () =>
         {
+            throwed = true;
             tr.SetParent(pizzaPlate);
+            GlobalManager.GameManager.pizzaPlate.GetComponent<PizzaPlate>().ingrPositions.Add(transform);
+            GlobalManager.GameManager.FiredOne();
         }));
+    }
 
-        GlobalManager.GameManager.FiredOne();
-
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.tag == this.gameObject.tag && throwed)
+        {
+            GlobalManager.GameManager.overlaps++;
+        }
     }
 
     #region Coroutines
