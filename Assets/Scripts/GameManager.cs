@@ -28,6 +28,7 @@ public class GameManager : MonoBehaviour
     [BoxGroup("Instances That Objects Use")] public Transform endPoint;
     [BoxGroup("Instances That Objects Use")] public Transform startPoint;
     [BoxGroup("Instances That Objects Use")] public Transform box;
+    [BoxGroup("Instances That Objects Use")] public Transform shovel;
 
     [BoxGroup("Level Info")] public List<IngredientType> recipe;
     [BoxGroup("Level Info")] public int currentIngr = 0;
@@ -35,6 +36,8 @@ public class GameManager : MonoBehaviour
     [BoxGroup("Level Info")] public int overlaps = 0;
 
     private Coroutines coroutines;
+    private Vector3 endPoint_startPos;
+    private Vector3 shovelStartPos;
 
     private void Awake()
     {
@@ -47,6 +50,7 @@ public class GameManager : MonoBehaviour
         //GlobalManager.LevelManager.SetLevel(GlobalManager.levelNum);
 
         SpawnIngridient();
+        
     }
 
     
@@ -76,6 +80,7 @@ public class GameManager : MonoBehaviour
         Application.targetFrameRate = 30;
 
         coroutines = GetComponent<Coroutines>();
+        endPoint_startPos = endPoint.position;
     }
 
     public void SpawnIngridient()
@@ -100,25 +105,35 @@ public class GameManager : MonoBehaviour
                 endPoint.position = endPoint.position - new Vector3(0f, 0f, 0.1f);
                 if (currentIngr < recipe.Count)
                 {
-                    PizzaCheck();
-                    SpawnIngridient();
+                    if (PizzaCheck())
+                    {
+                        SpawnIngridient();
+                    }
+                    else
+                    {
+                        Lose();
+                    }
                 }
                 else
                 {
-                    PizzaCheck();
-                    StartCoroutine(coroutines.LerpFieldOfView(Camera.main, Camera.main.fieldOfView, 100, 0.7f));
-                    StartCoroutine(LerpPositionX(box, box.position, pizzaPlate.position, 1f, ()=>
+                    if (PizzaCheck())
                     {
-                        box.transform.GetComponent<BoxController>().MakeBox();
-                        GlobalManager.CameraController.WinRotate();
-                    }));
-                    //Win();
+                        ShovelIt();
+                        StartCoroutine(coroutines.WaitForSeconds(3f, () =>
+                        {
+                            ReturnPizza();
+                        }));
+                    }
+                    else
+                    {
+                        Lose();
+                    }
                 }
             }));
         }
     }
 
-    public void PizzaCheck()
+    public bool PizzaCheck()
     {
         overlaps = overlaps / 2;
         if(overlaps == 0)
@@ -135,18 +150,58 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Lose();
             print("FAIL");
+            return false;
         }
 
         overlaps = 0;
+        return true;
+    }
+
+    public void BoxIt()
+    {
+        StartCoroutine(coroutines.LerpFieldOfView(Camera.main, Camera.main.fieldOfView, 100, 0.7f));
+        StartCoroutine(LerpPositionX(box, box.position, pizzaPlate.position, 1f, () =>
+        {
+            box.transform.GetComponent<BoxController>().MakeBox();
+            GlobalManager.CameraController.WinRotate();
+        }));
+    }
+
+    public void ShovelIt()
+    {
+        pizzaPlate.GetComponent<PizzaPlate>().rotate = false;
+        shovel.gameObject.SetActive(true);
+        Transform cam = GlobalManager.CameraController.GetParent();
+        Vector3 pos = new Vector3(cam.position.x, -15f, cam.position.y);
+        shovelStartPos = shovel.position;
+
+        StartCoroutine(coroutines.LerpPositionWithCustomAxis(shovel, shovel.position, pizzaPlate.position, .7f, 2, ()=>
+        {
+            StartCoroutine(coroutines.LerpPositionWithCustomAxis(cam, cam.position, pos, 1f));
+        }));
+    }
+
+    public void ReturnPizza()
+    {
+        Transform cam = GlobalManager.CameraController.GetParent();
+        Vector3 camStartPos = GlobalManager.CameraController.GetParentStartPos();
+
+        StartCoroutine(coroutines.LerpPositionWithCustomAxis(cam, cam.position, camStartPos, 1f, 0, ()=>
+        {
+            StartCoroutine(coroutines.LerpPositionWithCustomAxis(shovel, shovel.position, shovelStartPos, 1f, 2, ()=>
+            {
+                shovel.gameObject.SetActive(false);
+                BoxIt();
+            }));
+        }));
     }
 
     public void Win()
     {
         state = GameState.Win;
         GlobalManager.UI_Manager.SwitchPanel("Won");
-        NextLevel();
+        //NextLevel();
 
 
         //TODO 
@@ -156,7 +211,7 @@ public class GameManager : MonoBehaviour
     {
         state = GameState.Lose;
         GlobalManager.UI_Manager.SwitchPanel("Lost");
-        GlobalManager.LevelManager.ResetLevel();
+        //GlobalManager.LevelManager.ResetLevel();
 
         //TODO 
     }
@@ -166,6 +221,30 @@ public class GameManager : MonoBehaviour
         GlobalManager.levelNum++;
         GlobalManager.UI_Manager.NextLevel(GlobalManager.levelNum, 0, 10);                    //different max for every level
         GlobalManager.LevelManager.SetLevel(GlobalManager.levelNum);
+    }
+
+    public void Restart()
+    {
+        List<Transform> child_objects = new List<Transform>();
+        for(int i = 0; i < pizzaPlate.childCount; i++)
+        {
+            child_objects.Add(pizzaPlate.GetChild(i));
+        }
+
+        foreach(Transform t in child_objects)
+        {
+            t.GetComponent<IngredientsController>().ResetObject();
+        }
+
+        endPoint.position = endPoint_startPos;
+        currentIngr = 0;
+        ingrFired = 0;
+        overlaps = 0;
+
+        GlobalManager.CameraController.ResetCamera();
+        box.GetComponent<BoxController>().ResetBox();
+        pizzaPlate.GetComponent<PizzaPlate>().rotate = true;
+        SpawnIngridient();
     }
 
     public void ChangeState(string _state)

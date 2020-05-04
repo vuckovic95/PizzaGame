@@ -39,6 +39,60 @@ public class Coroutines : MonoBehaviour
         action?.Invoke();
     }
 
+    public IEnumerator LerpPositionWithCustomAxis(Transform tr, Vector3 start, Vector3 end, float time, int custom = 0, Action action = null)
+    {
+        float t = 0f;
+
+        while (t < 1f)
+        {
+            Vector3 pos = Vector3.Lerp(start, end, t);
+
+            if (custom == 0)
+            {
+                tr.position = pos;
+            }
+            else if(custom == 1)
+            {
+                tr.position = new Vector3(pos.x, tr.position.y, tr.position.z);
+            }
+            else if(custom == 2)
+            {
+                tr.position = new Vector3(tr.position.x, pos.y, tr.position.z);
+            }
+            else if(custom == 3)
+            {
+                tr.position = new Vector3(tr.position.x, tr.position.y, pos.z);
+            }
+            else
+            {
+                Debug.LogError("Wrong parameter entered, 1 - x, 2 - y, 3 - z");
+                break;
+            }
+            
+            t += Time.deltaTime / time;
+            yield return new WaitForEndOfFrame();
+        }
+
+        if (custom == 0)
+        {
+            tr.position = end;
+        }
+        else if (custom == 1)
+        {
+            tr.position = new Vector3(end.x, tr.position.y, tr.position.z);
+        }
+        else if (custom == 2)
+        {
+            tr.position = new Vector3(tr.position.x, end.y, tr.position.z);
+        }
+        else if (custom == 3)
+        {
+            tr.position = new Vector3(tr.position.x, tr.position.y, end.z);
+        }
+
+        action?.Invoke();
+    }
+
     public IEnumerator LerpFieldOfView(Camera c, float start, float end, float time, Action action = null)
     {
         float t = 0f;
